@@ -43,6 +43,46 @@ All ONS series fetched from the undated timeseries endpoints (the dated ones
 can serve frozen editions silently); annual changes computed from index
 levels, not quoted rates.
 
+## Method
+
+Every number in the battery comes from the same chain, starting at the
+published index level. Worked through on steel factory gate prices (EW6T):
+
+**1. Index.** ONS publishes the level each month. EW6T stood at 178.2 in
+September 2025 and 206.7 in September 2026.
+
+**2. Annual change (YoY).** This month against the same month a year ago:
+
+```
+YoY = I(t) / I(t-12) - 1  =  206.7 / 178.2 - 1  =  +16.0%
+```
+
+**3. Rolling 12M.** The average of the last twelve index levels against the
+average of the twelve before. Smooth, but slow: every month in the window
+counts equally, however old.
+
+**4. Wtd-R12.** The last twelve YoY readings, weighted linearly toward the
+most recent month. Weights are i/78 for i = 1 (oldest) to 12 (newest),
+because 1+2+...+12 = 78. In percent, oldest to newest:
+
+```
+1.3  2.6  3.8  5.1  6.4  7.7  9.0  10.3  11.5  12.8  14.1  15.4
+```
+
+The newest month carries 15.4% of the reading; the oldest 1.3%. On steel,
+the last twelve YoY readings run from -8.6% to +17.7%. Equal weights net
+that out to +1.1%; recency weighting gives +6.1%. When the two diverge this
+much, the series has turned, and the plain average has not noticed yet.
+
+**5. CAGR.** The index compounded over n years:
+
+```
+CAGR = ( I(t) / I(t - 12n) ) ^ (1/n) - 1
+```
+
+Five windows, one index, and they can legitimately disagree. That is not a
+flaw in the data. It is why the window you quote should always be stated.
+
 ## Design rules
 
 Direct end-labels with the latest value, never a legend box. A zero line on
