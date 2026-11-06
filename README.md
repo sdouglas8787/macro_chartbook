@@ -74,6 +74,23 @@ the last twelve YoY readings run from -8.6% to +17.7%. Equal weights net
 that out to +1.1%; recency weighting gives +6.1%. When the two diverge this
 much, the series has turned, and the plain average has not noticed yet.
 
+**The month view.** The page also carries an executive month table:
+latest and prior month's annual change, rolling 3M (the average of the last
+three annual changes), rolling 12M, and R12 forward. Sample from the
+November 2026 run:
+
+| Series | Latest | Prior | Rolling 3M | Rolling 12M | R12 forward |
+|---|---|---|---|---|---|
+| Consumer prices (CPI) | +3.4% | +3.1% | +3.1% | +3.1% | +3.5% |
+| Materials inputs | +8.5% | +6.8% | +7.2% | +4.7% | +7.4% |
+| Steel factory gate | +16.0% | +14.1% | +16.0% | +1.1% | +11.6% |
+
+R12 forward is a projection, not a forecast: the next twelve months' average
+against the last twelve IF the index keeps moving at the Wtd-R12 pace. The
+assumption is stated because the number is only as good as it. A real
+forecast carries a backtest - see the motorcycle repo for what that looks
+like.
+
 **5. CAGR.** The index compounded over n years:
 
 ```
