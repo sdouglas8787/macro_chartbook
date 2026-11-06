@@ -87,6 +87,82 @@ def tail(series: dict[str, float], n: int = WINDOW_MONTHS) -> tuple[list[str], l
     return keys, [series[k] for k in keys]
 
 
+def latest_yoy(levels):
+    g = yoy(levels)
+    return g[max(g)] if g else None
+
+
+def r12(levels):
+    """Rolling 12-month average against the prior 12, % change."""
+    keys = sorted(levels)
+    if len(keys) < 24:
+        return None
+    cur = sum(levels[k] for k in keys[-12:]) / 12
+    prev = sum(levels[k] for k in keys[-24:-12]) / 12
+    return (cur / prev - 1) * 100 if prev else None
+
+
+def wtd_r12(levels):
+    """Wtd-R12: the last twelve annual changes, linearly weighted toward the
+    most recent month (weights 1..12). A recency-weighted reading; a
+    value-weighted one needs volumes an index does not carry."""
+    g = yoy(levels)
+    keys = sorted(g)[-12:]
+    if len(keys) < 12:
+        return None
+    w = range(1, 13)
+    return sum(wi * g[k] for wi, k in zip(w, keys)) / sum(w)
+
+
+def cagr(levels, years):
+    keys = sorted(levels)
+    if len(keys) < years * 12 + 1:
+        return None
+    a, b = levels[keys[-1]], levels[keys[-(years * 12 + 1)]]
+    return ((a / b) ** (1 / years) - 1) * 100 if b > 0 else None
+
+
+def _pct(v):
+    return f"{v:+.1f}%" if v is not None else "-"
+
+
+def exec_summary(cpi, ghik, ghim, gb7s, ghgj, ew6t, ghef, evoq, k54u):
+    """Rule-generated executive summary. Every sentence carries its basis;
+    nothing here is hand-written for a particular month."""
+    out = []
+    m, f_, o = latest_yoy(ghik), latest_yoy(ghim), latest_yoy(gb7s)
+    if m is not None and o is not None:
+        gap = m - o
+        if abs(gap) > 1:
+            who = "absorbed between purchase and invoice" if gap > 0 else                   "recovered at the factory gate faster than costs are rising"
+        out.append(f"Materials inputs are running {m:+.1f}% on the year against "
+                   f"factory gate prices at {o:+.1f}%" +
+                   (f": {abs(gap):.1f} points being {who}. " if abs(gap) > 1
+                    else ", close to matched. ") + "[GHIK, GB7S]")
+    if m is not None and f_ is not None and (m > 0) != (f_ > 0):
+        out.append(f"The headline input figure averages materials at {m:+.1f}% "
+                   f"with fuels at {f_:+.1f}%, two directions in one number. "
+                   "[GHIK, GHIM]")
+    e, c = latest_yoy(k54u), latest_yoy(cpi)
+    if e is not None and c is not None:
+        d = e - c
+        word = "ahead of" if d > 0.2 else ("behind" if d < -0.2 else "level with")
+        out.append(f"Earnings growth at {e:+.1f}% is {word} CPI at {c:+.1f}%"
+                   + (f", real pay moving {d:+.1f} points. " if abs(d) > 0.2 else ". ")
+                   + "[K54U, D7BT]")
+    si, so = latest_yoy(ghgj), latest_yoy(ew6t)
+    fi, fo = latest_yoy(ghef), latest_yoy(evoq)
+    if None not in (si, fi) and (si > 0) != (fi > 0):
+        out.append(f"The two tracked sectors are in different cost worlds: "
+                   f"steel inputs {si:+.1f}% against food inputs {fi:+.1f}%. "
+                   "[GHGJ, GHEF]")
+    if None not in (si, so) and so > si + 1:
+        out.append(f"Steel factory gate prices ({so:+.1f}%) are outrunning the "
+                   f"sector's own input index ({si:+.1f}%): co-movement with a "
+                   "common global driver, not pass-through above 100%. [GHGJ, EW6T]")
+    return out
+
+
 def _style(ax):
     ax.set_facecolor(BG)
     for side in ("top", "right"):
@@ -207,7 +283,41 @@ def main() -> int:
     else:
         print("  FRED_API_KEY not set - FRED row skipped (ONS charts unaffected)")
 
-    # ---- the page -----------------------------------------------------------
+    # ---- executive summary and metric battery -------------------------------
+    summary = exec_summary(cpi, ghik, ghim, gb7s, ghgj, ew6t, ghef, evoq, k54u)
+    battery = [
+        ("Consumer prices (CPI)", "D7BT", cpi),
+        ("Materials inputs, all manufacturing", "GHIK", ghik),
+        ("Fuels inputs, all manufacturing", "GHIM", ghim),
+        ("Factory gate, all manufactured", "GB7S", gb7s),
+        ("Steel inputs", "GHGJ", ghgj),
+        ("Steel factory gate", "EW6T", ew6t),
+        ("Meat inputs", "GHEF", ghef),
+        ("Grain mill factory gate", "EVOQ", evoq),
+        ("Average weekly earnings", "K54U", k54u),
+    ]
+    rows = "".join(
+        f"<tr><td>{name}</td><td class=n>{_pct(latest_yoy(lv))}</td>"
+        f"<td class=n>{_pct(r12(lv))}</td><td class=n>{_pct(wtd_r12(lv))}</td>"
+        f"<td class=n>{_pct(cagr(lv, 3))}</td>"
+        f"<td class=n>{_pct(cagr(lv, 5))}</td><td class=m>{cdid}, to {max(lv)}</td></tr>"
+        for name, cdid, lv in battery if lv)
+    table = ("<h2>The numbers, four ways</h2>"
+             "<p class=note>Annual change is the latest month on a year earlier; "
+             "rolling 12M compares the last twelve months' average with the prior "
+             "twelve; Wtd-R12 weights the last twelve annual changes linearly "
+             "toward the most recent month; CAGR compounds the index over "
+             "three and five years. All computed from index levels.</p>"
+             "<div class=tbl><table><tr><th>Series</th><th class=n>YoY</th>"
+             "<th class=n>Rolling 12M</th><th class=n>Wtd-R12</th><th class=n>CAGR 3yr</th>"
+             "<th class=n>CAGR 5yr</th><th class=m>Source</th></tr>"
+             f"{rows}</table></div>")
+    summary_html = ("<h2>Executive summary</h2><ul>"
+                    + "".join(f"<li>{x}</li>" for x in summary)
+                    + "</ul><p class=note>Generated from the data by fixed rules, "
+                    "basis in brackets; nothing is hand-written for a particular "
+                    "month.</p>") if summary else ""
+
     cards = []
     for path, caption in tiles:
         with open(path, "rb") as fh:
@@ -221,7 +331,14 @@ def main() -> int:
 body{{margin:0;background:{BG};color:{INK};font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}}
 main{{max-width:72rem;margin:0 auto;padding:2.5rem 1.25rem}}
 h1{{font-size:1.6rem;margin:0}} .sub{{color:{MUTED};margin:.3rem 0 1.8rem;font-size:.95rem}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(21rem,1fr));gap:1.2rem}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(21rem,1fr));gap:1.2rem;margin-top:1.6rem}}
+h2{{font-size:1.02rem;text-transform:uppercase;letter-spacing:.07em;color:{MUTED};border-bottom:1px solid {LINE};padding-bottom:.35rem;margin:1.8rem 0 .8rem}}
+ul{{margin:.4rem 0;padding-left:1.2rem}} li{{margin:.35rem 0}}
+.note{{color:{MUTED};font-size:.85rem}}
+.tbl{{overflow-x:auto}} table{{border-collapse:collapse;width:100%;font-size:.9rem}}
+th,td{{text-align:left;padding:.45rem .7rem;border-bottom:1px solid {LINE}}}
+th{{color:{MUTED};font-weight:600}} td.n,th.n{{text-align:right;font-variant-numeric:tabular-nums}}
+td.m{{color:{MUTED};font-size:.8rem}}
 figure{{margin:0;border:1px solid {LINE};border-radius:8px;background:#fff;padding:.6rem}}
 img{{width:100%;height:auto;display:block}}
 figcaption{{font-size:.8rem;color:{MUTED};padding:.5rem .3rem .2rem}}
@@ -229,6 +346,8 @@ footer{{color:{MUTED};font-size:.8rem;margin-top:2rem}}</style></head><body><mai
 <h1>UK macro chartbook</h1>
 <p class="sub">Generated {date.today():%d %b %Y} · newest observation {newest} · {vint}.
 Every chart names its source and series ID. Public data throughout.</p>
+{summary_html}
+{table}
 <div class="grid">{"".join(cards)}</div>
 <footer>Built by chartbook.py. ONS data under the Open Government Licence; FRED
 data where shown. A chart that cannot say where it came from is an opinion
