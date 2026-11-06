@@ -74,22 +74,26 @@ the last twelve YoY readings run from -8.6% to +17.7%. Equal weights net
 that out to +1.1%; recency weighting gives +6.1%. When the two diverge this
 much, the series has turned, and the plain average has not noticed yet.
 
-**The month view.** The page also carries an executive month table:
-latest and prior month's annual change, rolling 3M (the average of the last
-three annual changes), rolling 12M, and R12 forward. Sample from the
-November 2026 run:
+**Wtd-R3.** The same idea over three months: weights 1, 2, 3 of 6, so the
+latest month carries half the reading. Fast but noisy; read it against
+Wtd-R12.
 
-| Series | Latest | Prior | Rolling 3M | Rolling 12M | R12 forward |
-|---|---|---|---|---|---|
-| Consumer prices (CPI) | +3.4% | +3.1% | +3.1% | +3.1% | +3.5% |
-| Materials inputs | +8.5% | +6.8% | +7.2% | +4.7% | +7.4% |
-| Steel factory gate | +16.0% | +14.1% | +16.0% | +1.1% | +11.6% |
+**The table.** One row per series, every lens on it: latest and prior
+month's annual change, Wtd-R3, unweighted rolling 12M, Wtd-R12, a Wtd-R12
+forward projection, and CAGR over two, three and five years. Sample from
+the November 2026 run:
 
-R12 forward is a projection, not a forecast: the next twelve months' average
-against the last twelve IF the index keeps moving at the Wtd-R12 pace. The
-assumption is stated because the number is only as good as it. A real
-forecast carries a backtest - see the motorcycle repo for what that looks
-like.
+| Series | Latest | Prior | Wtd-R3 | Rolling 12M | Wtd-R12 | Wtd-R12 fwd | CAGR 2yr | CAGR 3yr | CAGR 5yr |
+|---|---|---|---|---|---|---|---|---|---|
+| Consumer prices (CPI) | +3.4% | +3.1% | +3.2% | +3.1% | +3.0% | +3.5% | +3.6% | +3.0% | +5.1% |
+| Materials inputs | +8.5% | +6.8% | +7.6% | +4.7% | +6.2% | +7.4% | +4.7% | +2.7% | +5.1% |
+| Steel factory gate | +16.0% | +14.1% | +15.7% | +1.1% | +6.1% | +11.6% | +3.2% | +1.3% | -1.8% |
+
+Wtd-R12 fwd is a projection, not a forecast: the next twelve months'
+average against the last twelve IF the index keeps moving at the Wtd-R12
+pace. The assumption is stated because the number is only as good as it.
+A real forecast carries a backtest - see the motorcycle repo for what that
+looks like.
 
 **5. CAGR.** The index compounded over n years:
 

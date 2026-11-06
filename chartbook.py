@@ -120,11 +120,14 @@ def prior_yoy(levels):
     return g[keys[-2]] if len(keys) >= 2 else None
 
 
-def r3(levels):
-    """Average of the last three monthly annual changes."""
+def wtd_r3(levels):
+    """Wtd-R3: the last three annual changes, linearly weighted toward the
+    most recent month (weights 1, 2, 3 of 6: the latest carries half)."""
     g = yoy(levels)
     keys = sorted(g)[-3:]
-    return sum(g[k] for k in keys) / 3 if len(keys) == 3 else None
+    if len(keys) < 3:
+        return None
+    return sum(w * g[k] for w, k in zip((1, 2, 3), keys)) / 6
 
 
 def r12_forward(levels):
@@ -329,37 +332,32 @@ def main() -> int:
         f"<td class=n>{_pct(cagr(lv, 3))}</td>"
         f"<td class=n>{_pct(cagr(lv, 5))}</td><td class=m>{cdid}, to {max(lv)}</td></tr>"
         for name, cdid, lv in battery if lv)
-    month_rows = "".join(
+    rows = "".join(
         f"<tr><td>{name}</td><td class=n>{_pct(latest_yoy(lv))}</td>"
-        f"<td class=n>{_pct(prior_yoy(lv))}</td><td class=n>{_pct(r3(lv))}</td>"
-        f"<td class=n>{_pct(r12(lv))}</td><td class=n>{_pct(r12_forward(lv))}</td>"
-        f"<td class=m>{cdid}</td></tr>"
+        f"<td class=n>{_pct(prior_yoy(lv))}</td><td class=n>{_pct(wtd_r3(lv))}</td>"
+        f"<td class=n>{_pct(r12(lv))}</td><td class=n>{_pct(wtd_r12(lv))}</td>"
+        f"<td class=n>{_pct(r12_forward(lv))}</td><td class=n>{_pct(cagr(lv, 2))}</td>"
+        f"<td class=n>{_pct(cagr(lv, 3))}</td><td class=n>{_pct(cagr(lv, 5))}</td>"
+        f"<td class=m>{cdid}, to {max(lv)}</td></tr>"
         for name, cdid, lv in battery if lv)
-    month_table = ("<h2>The month view</h2>"
-        "<p class=note>Annual change for the latest and prior month; rolling 3M "
-        "averages the last three annual changes; rolling 12M compares the last "
-        "twelve months' average with the prior twelve. R12 forward is a "
-        "projection, not a forecast: the next twelve months' average against "
-        "the last twelve IF the index keeps moving at the Wtd-R12 pace. The "
-        "assumption is stated because the number is only as good as it.</p>"
+    table = ("<h2>The numbers</h2>"
+        "<p class=note>Latest and prior month are annual changes. Wtd-R3 and "
+        "Wtd-R12 weight the last three and twelve annual changes linearly "
+        "toward the most recent month (Wtd-R3 weights 1-3 of 6, the latest "
+        "carries 50%; Wtd-R12 weights 1-12 of 78, the latest carries 15.4%). "
+        "Rolling 12M is unweighted: the last twelve months' average against "
+        "the prior twelve - when it diverges from Wtd-R12, the series has "
+        "turned. Wtd-R12 fwd is a projection, not a forecast: the next twelve "
+        "months' average against the last twelve IF the index keeps moving at "
+        "the Wtd-R12 pace. CAGR compounds the index over two, three and five "
+        "years. All computed from index levels; the method, worked through, "
+        "is in the README.</p>"
         "<div class=tbl><table><tr><th>Series</th><th class=n>Latest</th>"
-        "<th class=n>Prior</th><th class=n>Rolling 3M</th>"
-        "<th class=n>Rolling 12M</th><th class=n>R12 forward</th>"
+        "<th class=n>Prior</th><th class=n>Wtd-R3</th><th class=n>Rolling 12M</th>"
+        "<th class=n>Wtd-R12</th><th class=n>Wtd-R12 fwd</th>"
+        "<th class=n>CAGR 2yr</th><th class=n>CAGR 3yr</th><th class=n>CAGR 5yr</th>"
         "<th class=m>Source</th></tr>"
-        f"{month_rows}</table></div>")
-
-    table = ("<h2>The numbers, four ways</h2>"
-             "<p class=note>Annual change is the latest month on a year earlier; "
-             "rolling 12M compares the last twelve months' average with the prior "
-             "twelve; Wtd-R12 weights the last twelve annual changes linearly "
-             "toward the most recent month (weights 1-12 of 78: the newest "
-             "month carries 15.4%, the oldest 1.3%); CAGR compounds the index "
-             "over three and five years. All computed from index levels; the "
-             "full method, worked through, is in the README.</p>"
-             "<div class=tbl><table><tr><th>Series</th><th class=n>YoY</th>"
-             "<th class=n>Rolling 12M</th><th class=n>Wtd-R12</th><th class=n>CAGR 3yr</th>"
-             "<th class=n>CAGR 5yr</th><th class=m>Source</th></tr>"
-             f"{rows}</table></div>")
+        f"{rows}</table></div>")
     summary_html = ("<h2>Executive summary</h2><ul>"
                     + "".join(f"<li>{x}</li>" for x in summary)
                     + "</ul><p class=note>Generated from the data by fixed rules, "
@@ -395,7 +393,6 @@ footer{{color:{MUTED};font-size:.8rem;margin-top:2rem}}</style></head><body><mai
 <p class="sub">Generated {date.today():%d %b %Y} · newest observation {newest} · {vint}.
 Every chart names its source and series ID. Public data throughout.</p>
 {summary_html}
-{month_table}
 {table}
 <div class="grid">{"".join(cards)}</div>
 <footer>Built by chartbook.py. ONS data under the Open Government Licence; FRED
